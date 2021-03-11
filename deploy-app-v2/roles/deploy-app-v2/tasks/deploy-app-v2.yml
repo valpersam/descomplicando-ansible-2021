@@ -1,0 +1,68 @@
+- python_requirements_facts:
+    dependencies:
+      - openshift
+      - requests
+
+- name: Instalando pip3
+  apt: name=python3-pip state=present
+
+- name: Instalando python3-virtualenv
+  apt: name=python3-virtualenv state=present
+
+- name: Instalando dependencias do modulo k8s openshift version
+  command: pip3 install openshift==0.8.4 --ignore-installed
+
+- name: Instalando dependencias do modulo k8s openshift
+  command: pip3 install openshift
+
+- name: Instalando dependencias do modulo k8s upgrade openshift
+  command: pip3 install --upgrade --user openshift
+
+- name: Instalando dependencias do modulo k8s kubernetes 
+  command: pip3 install kubernetes
+
+- name: Instalando dependencias do modulo k8s PyYAML
+  command: pip3 install PyYAML
+
+- name: Instalando dependencias do modulo k8s
+  command: pip3 install install --upgrade requests
+
+- name: Copiando o arquivo de deployment do app v1
+  template:
+    src: app-v1.yml.j2
+    dest: /opt/giropops/app-v1.yml
+    owner: root
+    group: root
+    mode: 0644
+  register: copiando_deploy_app_v1
+
+- name: Copiando o arquivo de deployment do app v2
+  template:
+    src: app-v2.yml.j2
+    dest: /opt/giropops/app-v2.yml
+    owner: root
+    group: root
+    mode: 0644
+  register: copiando_deploy_app_v2
+
+- name: Deploy do app-v2
+  k8s:
+    state: present
+    namespace: default
+    src: /opt/giropops/app-v2.yml
+
+- name: Scale down da app-v1
+  k8s:
+    state: present
+    namespace: default
+    src: /opt/giropops/app-v1.yml
+
+- name: Dentro de 02 minutos o app-v1 sera removido. Pressione cront+c para cancelar
+  pause:
+    minutes: 2
+
+- name: Removendo o app-v1
+  k8s:
+    state: absent
+    namespace: default
+    src: /opt/giropops/app-v1.yml

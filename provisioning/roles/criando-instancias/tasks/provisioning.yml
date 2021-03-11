@@ -1,0 +1,102 @@
+---
+- name: Criando o Grupo de Seguranca
+  os_security_group:
+    state: present
+    auth:
+      auth_url: "{{ keystone_url }}"
+      username: "{{ tenant_username }}"
+      password: "{{ tenant_password }}"
+      project_name: "{{ tenant_name }}"
+    name: "{{ security_group }}"
+    description: Grupo de Segurança para Treinamento Descomplicando Ansible
+
+- name: Criando instancia 
+  os_server:
+    state: present
+    auth:
+      auth_url: "{{ keystone_url }}"
+      username: "{{ tenant_username }}"
+      password: "{{ tenant_password }}"
+      project_name: "{{ tenant_name }}"
+    name: "{{ item }}"
+    nics:
+      - net-id: "{{ net_id }}"
+    region_name: "{{ region_name }}"
+    image: "{{ image_id }}"
+    key_name: "{{ ssh_key_name }}"
+    timeout: 800
+    flavor: "{{ flavor_name }}"
+    security_groups: "{{ security_groups }}"
+    validate_certs: false
+    auto_ip: yes
+  with_items:
+  - descomplicando-ansible_m1
+  - descomplicando-ansible_w1
+  - descomplicando-ansible_w2
+  register: newnodes
+
+- name: Criando Regras Portas k8s
+  os_security_group_rule:
+    auth:
+      auth_url: "{{ keystone_url }}"
+      username: "{{ tenant_username }}"
+      password: "{{ tenant_password }}"
+      project_name: "{{ tenant_name }}"
+    security_group: "{{ security_group }}"
+    protocol: "{{ item.protocol }}"
+    port_range_min: "{{ item.port }}"
+    port_range_max: "{{ item.port }}"
+    remote_ip_prefix: 0.0.0.0/0
+  with_items:
+  - "{{ socket }}"
+
+- name: Criando Regras k8s
+  os_security_group_rule:
+    auth:
+      auth_url: "{{ keystone_url }}"
+      username: "{{ tenant_username }}"
+      password: "{{ tenant_password }}"
+      project_name: "{{ tenant_name }}"
+    security_group: "{{ security_group }}"
+    protocol: tcp
+    port_range_min: 30000
+    port_range_max: 32767
+    remote_ip_prefix: 0.0.0.0/0
+
+- name: Criando Regra Ping
+  os_security_group_rule:
+    auth:
+      auth_url: "{{ keystone_url }}"
+      username: "{{ tenant_username }}"
+      password: "{{ tenant_password }}"
+      project_name: "{{ tenant_name }}"
+    security_group: "{{ security_group }}"
+    protocol: icmp
+    remote_ip_prefix: 0.0.0.0/0
+
+- name: Adicionando a instancia ao inventario temp
+  add_host: name={{ item.server.public_v4  }} groups= "{{ hosts_groups }}"
+  with_items: "{{ newnodes.results }}"
+
+- name: Adicionando o IP publico da instancia criada ao arquivo hosts
+  local_action: lineinfile
+    dest="./hosts"
+    regexp={{ item.server.public_v4 }}
+    insertafter="[kubernetes]" line={{ item.server.public_v4 }}
+  with_items: "{{ newnodes.results }}"
+
+- name: Adicionando o IP privado da instancia criada ao arquivo hosts
+  local_action: lineinfile
+    dest="./hosts"
+    regexp={{ item.server.private_v4 }}
+    insertafter="[kubernetes]" line={{ item.server.private_v4 }}
+  with_items: "{{ newnodes.results }}"
+
+- name: Esperando o SSH
+  local_action: wait_for
+    host={{ item.server.public_v4 }}
+    port=22
+    state=started
+  with_items: "{{ newnodes.results }}"
+
+

@@ -1,0 +1,29 @@
+---
+# vars file for criando-instancias
+instance_name: descomplicando_ansible
+keystone_url: https://keystone.br-sp1.openstack.uolcloud.com.br:5000/v2.0
+tenant_username: vsampaio
+tenant_password: c4EG&226W6IR3DHx
+tenant_name: UOLDIVEO_Virtualizacao
+net_id: 1be72193-4ab6-4b43-8b9c-99e6fb3160b5 
+region_name: br-sp1
+image_id: ad3710c9-3c1e-4883-a68c-9a6153b2a9f6
+ssh_key_name: ansible-keypair
+flavor_name: 26836b91-11bc-40eb-bd6e-5734e76446ad
+hosts_groups: kubernetes
+security_groups: default,descomplicando_ansible
+security_group: descomplicando_ansible
+count: 3
+
+socket:
+- { protocol: tcp, port: 22 }
+- { protocol: tcp, port: 2379 }
+- { protocol: tcp, port: 2380 }
+- { protocol: tcp, port: 6443 }
+- { protocol: tcp, port: 10250 }
+- { protocol: tcp, port: 10251 }
+- { protocol: tcp, port: 10252 }
+- { protocol: tcp, port: 10255 }
+- { protocol: tcp, port: 6783 }
+- { protocol: udp, port: 6783 }
+- { protocol: udp, port: 6784 }
